@@ -37,8 +37,8 @@ function App() {
         timeout: 1300,
       },
       {
-        key: 'posts';
-        ms: 30000;
+        key: 'posts',
+        ms: 30000,
       })
       .then(response => response.json())
       .then((data: Post[]) => setPosts(data));
