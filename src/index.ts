@@ -1,3 +1,3 @@
-import customFetch from "./fetch";
-const fetch = customFetch;
-export default fetch;
+import customFetchTC from "./fetchTC";
+const fetchTC = customFetchTC;
+export default fetchTC;

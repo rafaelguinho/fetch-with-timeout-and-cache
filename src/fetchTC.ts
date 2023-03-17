@@ -1,14 +1,6 @@
 import { fetchFromCache, insertIntoCache } from "./cache";
 import { CacheOptions, CustomRequestInit } from "./types";
 
-export default async function customFetch(
-  resource: RequestInfo | URL,
-  options?: CustomRequestInit,
-  cacheOptions?: CacheOptions
-): Promise<Response> {
-  return fetchWithTimeoutAndCache(resource, options, cacheOptions);
-}
-
 async function fetchWithTimeout(
   resource: RequestInfo | URL,
   options?: CustomRequestInit
@@ -46,4 +38,12 @@ async function fetchWithTimeoutAndCache(
   }
 
   return response;
+}
+
+export default async function customFetchTC(
+  resource: RequestInfo | URL,
+  options?: CustomRequestInit,
+  cacheOptions?: CacheOptions
+): Promise<Response> {
+  return fetchWithTimeoutAndCache(resource, options, cacheOptions);
 }
