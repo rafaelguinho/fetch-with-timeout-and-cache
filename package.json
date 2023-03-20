@@ -1,6 +1,6 @@
 {
   "name": "fetch-with-timeout-and-cache",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Extending fetch api to include timeouts and a client side cache to avoid multiples requests.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -23,7 +23,7 @@ async function fetchWithTimeoutAndCache(
   cacheOptions?: CacheOptions
 ): Promise<Response> {
   const path = resource.toString();
-  const responseInCache = await fetchFromCache(resource.toString());
+  const responseInCache = await fetchFromCache(resource.toString(), cacheOptions?.key);
 
   if (responseInCache) {
     return responseInCache;

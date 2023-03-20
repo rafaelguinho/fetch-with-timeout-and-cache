@@ -1,16 +1,19 @@
 export const fetchFromCache = async (
+  cacheKey: string,
   path: string
 ): Promise<Response | undefined> => {
   try {
     if ("caches" in window) {
-      const response = await window.caches.match(path);
+      const response = await window.caches.match(path, {
+        cacheName: cacheKey,
+      });
 
       if (response) {
         const expiration = response.headers.get("cache-expires");
 
         const expirationDate = expiration ? Date.parse(expiration) : new Date();
         const now = new Date();
-        
+
         if (expirationDate > now) {
           return response;
         }
