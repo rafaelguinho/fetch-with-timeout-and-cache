@@ -59,8 +59,10 @@ export default async function customFetchTC(
       cacheOptions
     );
   } else if (isCacheOptions(options)) {
-    fetchWithTimeoutAndCache(resource, undefined, options as CacheOptions);
+    return fetchWithTimeoutAndCache(resource, undefined, options as CacheOptions);
   }
+
+  return fetchWithTimeoutAndCache(resource, options, cacheOptions);
 }
 
 function isCustomRequestInit(
