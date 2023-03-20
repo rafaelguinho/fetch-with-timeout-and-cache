@@ -5,7 +5,7 @@ async function fetchWithTimeout(
   resource: RequestInfo | URL,
   options?: CustomRequestInit
 ): Promise<Response> {
-  const timeout = options?.timeout ?? 10000;
+  const timeout = options?.timeout ?? 100000;
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -23,7 +23,10 @@ async function fetchWithTimeoutAndCache(
   cacheOptions?: CacheOptions
 ): Promise<Response> {
   const path = resource.toString();
-  const responseInCache = await fetchFromCache(resource.toString(), cacheOptions?.key);
+  const responseInCache = await fetchFromCache(
+    resource.toString(),
+    cacheOptions?.key
+  );
 
   if (responseInCache) {
     return responseInCache;
@@ -40,10 +43,34 @@ async function fetchWithTimeoutAndCache(
   return response;
 }
 
+export async function customFetchTC(
+  resource: RequestInfo | URL,
+  cacheOptions: CacheOptions
+): Promise<Response>;
 export default async function customFetchTC(
   resource: RequestInfo | URL,
-  options?: CustomRequestInit,
+  options?: CustomRequestInit | CacheOptions,
   cacheOptions?: CacheOptions
 ): Promise<Response> {
-  return fetchWithTimeoutAndCache(resource, options, cacheOptions);
+  if (isCustomRequestInit(options)) {
+    return fetchWithTimeoutAndCache(
+      resource,
+      options as CustomRequestInit,
+      cacheOptions
+    );
+  } else if (isCacheOptions(options)) {
+    fetchWithTimeoutAndCache(resource, undefined, options as CacheOptions);
+  }
+}
+
+function isCustomRequestInit(
+  options?: CustomRequestInit | CacheOptions
+): options is CustomRequestInit {
+  return "timeout" in options;
+}
+
+function isCacheOptions(
+  options?: CustomRequestInit | CacheOptions
+): options is CacheOptions {
+  return "ms" in options;
 }
