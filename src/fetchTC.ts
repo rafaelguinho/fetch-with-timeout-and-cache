@@ -1,18 +1,60 @@
 import { fetchFromCache, insertIntoCache } from "./cache";
-import { CacheOptions, CustomRequestInit } from "./types";
+import {
+  CacheOptions,
+  CustomRequestInit,
+  FetchTCParams,
+  RetryOptions,
+} from "./types";
+
+async function fetchWithRetry(
+  resource: RequestInfo | URL,
+  options?: CustomRequestInit,
+  retryOptions?: RetryOptions
+): Promise<Response> {
+  const retries = retryOptions?.retries ?? 0;
+
+  try {
+    const response = await fetch(resource, {
+      ...options,
+    });
+
+    if (response.status >= 500 && response.status <= 599 && retries > 0)
+      throw response;
+
+    return response;
+  } catch (error) {
+    if (retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryOptions.delay ?? 0));
+
+      const newRetryOptions: RetryOptions = {
+        ...retryOptions,
+        retries: retries - 1,
+      };
+
+      return await fetchWithRetry(resource, options, newRetryOptions);
+    }
+
+    throw error;
+  }
+}
 
 async function fetchWithTimeout(
   resource: RequestInfo | URL,
-  options?: CustomRequestInit
+  options?: CustomRequestInit,
+  retryOptions?: RetryOptions
 ): Promise<Response> {
   const timeout = options?.timeout ?? 100000;
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-  const response = await fetch(resource, {
-    ...options,
-    signal: controller.signal,
-  });
+  const response = await fetchWithRetry(
+    resource,
+    {
+      ...options,
+      signal: controller.signal,
+    },
+    retryOptions
+  );
   clearTimeout(id);
   return response;
 }
@@ -20,21 +62,26 @@ async function fetchWithTimeout(
 async function fetchWithTimeoutAndCache(
   resource: RequestInfo | URL,
   options?: CustomRequestInit,
-  cacheOptions?: CacheOptions
+  cacheOptions?: CacheOptions,
+  retryOptions?: RetryOptions
 ): Promise<Response> {
   const path = resource.toString();
   const responseInCache = await fetchFromCache(
-    resource.toString(),
-    cacheOptions?.key
+    cacheOptions?.key,
+    resource.toString()
   );
 
   if (responseInCache) {
     return responseInCache;
   }
 
-  const response = await fetchWithTimeout(resource, {
-    ...options,
-  });
+  const response = await fetchWithTimeout(
+    resource,
+    {
+      ...options,
+    },
+    retryOptions
+  );
 
   if (cacheOptions && response.ok) {
     await insertIntoCache(cacheOptions.key, response, path, cacheOptions.ms);
@@ -43,36 +90,33 @@ async function fetchWithTimeoutAndCache(
   return response;
 }
 
-export async function customFetchTC(
-  resource: RequestInfo | URL,
-  cacheOptions: CacheOptions
+export default async function customFetchTC(
+  arg: FetchTCParams
 ): Promise<Response>;
 export default async function customFetchTC(
   resource: RequestInfo | URL,
-  options?: CustomRequestInit | CacheOptions,
-  cacheOptions?: CacheOptions
+  options?: CustomRequestInit,
+  cacheOptions?: CacheOptions,
+  retryOptions?: RetryOptions
+): Promise<Response>;
+export default async function customFetchTC(
+  arg: RequestInfo | URL | FetchTCParams,
+  options?: CustomRequestInit,
+  cacheOptions?: CacheOptions,
+  retryOptions?: RetryOptions
 ): Promise<Response> {
-  if (isCustomRequestInit(options)) {
+  if (isFetchTCParams(arg)) {
     return fetchWithTimeoutAndCache(
-      resource,
-      options as CustomRequestInit,
-      cacheOptions
+      arg.resource,
+      arg.options,
+      arg.cacheOptions,
+      arg.retryOptions
     );
-  } else if (isCacheOptions(options)) {
-    return fetchWithTimeoutAndCache(resource, undefined, options as CacheOptions);
   }
 
-  return fetchWithTimeoutAndCache(resource, options, cacheOptions);
+  return fetchWithTimeoutAndCache(arg, options, cacheOptions, retryOptions);
 }
 
-function isCustomRequestInit(
-  options?: CustomRequestInit | CacheOptions
-): options is CustomRequestInit {
-  return "timeout" in options;
-}
-
-function isCacheOptions(
-  options?: CustomRequestInit | CacheOptions
-): options is CacheOptions {
-  return "ms" in options;
+function isFetchTCParams(arg?: any): arg is FetchTCParams {
+  return "resource" in arg;
 }
